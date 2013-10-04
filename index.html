@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Your New Application</title>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      /* Prevent copy paste for all elements except text fields */
+      *  { -webkit-user-select:none; -webkit-tap-highlight-color:rgba(255, 255, 255, 0); }
+      input, textarea  { -webkit-user-select:text; }
+
+      /* Set up the page with a default background image */
+      body {
+      background-color:#fff;
+      color:#000;
+      width: 100%;
+      height: 100%;
+      font-family:Arial;
+      font-size:18pt;
+      margin:0px;padding:0px;
+      background-image:url('images/background.jpg');
+      }
+
+      #map {
+      height: 400px;
+      }
+
+      .top_bar {
+      padding:12px;
+      background-color:#222;
+      color:#ddd;
+      font-size:16px;
+      font-weight:bold;
+      font-family: "Myriad", Arial, Helvetica, sans-serif;
+      text-align:center;
+      text-shadow: 0px 1px #000, 0px 0px #fff;
+      }
+      .blue-home-btn .ui-icon-home {
+      background-color: rgb(3, 85, 162);
+      }
+      .info-box {
+      width: 90%;
+      padding: 5%;
+      background-color: white;
+      border: 1px solid grey;
+      }
+
+
+    </style>
+    <script type="text/javascript" src="cordova.js"></script>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/jquery.mobile/jquery.mobile-1.3.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="js/jquery.mobile/jquery.mobile-1.3.1.min.css">
+    <script type="text/javascript">
+      //TODO 1 : Add event listener for device ready
+      document.addEventListener("deviceready", onDeviceReady, false);
+      function onDeviceReady() {
+        setup();
+        loadMap();
+        navigator.splashscreen.hide();
+      }
+    </script>
+    <script type="text/javascript">
+      var watchid = null, map; 
+      var carMarker, userMarker;
+      var CAR = "images/car.png",
+      USER = "images/user.png";
+      var carLoc;
+      
+      //Setup event handlers and page transitions for the app
+      function setup() {
+        $(document).on('pageshow', '#mapPage', updateMapPage);
+        $(document).on('click', '#lastLoc', showMapPage);
+        $(document).on('click', '#curLoc', saveCurrentLocation);
+        // If localstorage already has previous location, load it
+        if(carLoc = getLastLocation() ) {
+          $("#lastLoc").removeClass('ui-disabled');
+          $(".info-box").text( "Latitude: " + carLoc.lat+
+              "\nLongitude: " + carLoc.lng);
+        } else {
+          if(!($("#lastLoc").hasClass('ui-disabled')))
+            $("#lastLoc").addClass('ui-disabled');
+          $(".info-box").text('No location data');
+        }
+      }
+      
+      /** Save the lat lng values into local storage **/
+      function setLastLocation(lat, lng) {
+        window.localStorage.setItem("com.intel.latitude", lat);
+        window.localStorage.setItem("com.intel.longitude", lng);
+      }
+      
+      /** Get the lat lng values from local storage **/
+      function getLastLocation() {
+        if(window.localStorage.getItem("com.intel.latitude") && 
+            window.localStorage.getItem("com.intel.longitude"))
+          return {
+      lat: window.localStorage.getItem("com.intel.latitude"),
+             lng: window.localStorage.getItem("com.intel.longitude")
+          };
+      }
+      
+      /**Saves the current location. Invoked when "Remember my car" is clicked**/
+      function saveCurrentLocation(){
+        console.log("Saving the current Location");
+      
+        /** Success handler **/
+        function onSuccess(position) {
+          // Set Location parameters
+          console.log("Saving current loc");
+          setLastLocation(position.coords.latitude, position.coords.longitude);
+      
+          //Enable the locate car button
+          $("#lastLoc").removeClass('ui-disabled');
+          $(".info-box").text( "Latitude: " + position.coords.latitude +
+              "\nLongitude: " + position.coords.longitude);
+        }
+      
+        /** Error handler **/
+        function onError() {
+          alert("Unable to get current location");
+        }
+      
+        //TODO 2: Get current location
+        navigator.geolocation.getCurrentPosition(onSuccess, onError);
+      }
+      
+      /** Set up map page **/
+      function loadMap() {
+        var latlng = new google.maps.LatLng(37.5, -122);
+        var mapOptions = {
+      zoom: 15,
+            center: latlng,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+        if($(document).height()  < 400)
+          $("#map").height(screen.height/devicePixelRatio - 44);
+        else
+          $("#map").height($(document).height()- 44);
+        map = new google.maps.Map(document.getElementById('map'),mapOptions);
+      }
+      
+      function showMapPage() {
+        if(carLoc = getLastLocation())
+          $.mobile.changePage("#mapPage");
+      }
+      
+      /** Add Markers for position of car and your current position **/ 
+      function updateMapPage() {
+        if(carLoc){
+          google.maps.event.trigger(map, 'resize');
+          map.setCenter(new google.maps.LatLng(carLoc.lat, carLoc.lng));
+      
+          //TODO 3: Show the car Location
+          carMarker = addPin(carMarker, 
+              carLoc.lat,
+              carLoc.lng,
+              CAR);
+      
+          //TODO 4: Watch for current location
+          watchId = navigator.geolocation.watchPosition(onSuccess, onError);
+      
+          /** Success handler - Adds user position marker **/
+          function onSuccess(position) {
+            //TODO 5: Update user's current position marker
+            userMarker = addPin(userMarker, 
+                position.coords.latitude, 
+                position.coords.longitude,
+                USER);
+          }
+      
+          /** Error handler **/
+          function onError() {
+            alert("Unable to get current location");
+          }
+        }
+        else
+          alert("Unable to get location");
+      }
+      
+      
+      function addPin(marker, lat, lng, type){
+        console.log("Entering "+marker);
+        var latlng = new google.maps.LatLng(lat,lng);
+        console.log(latlng);
+        console.log(type);
+        if(marker) {
+          console.log("changing position");
+          marker.setPosition(latlng);
+        } else {
+          console.log("adding Pin");
+          console.log("Lat : " + lat + " Long: "+ lng);
+          marker = new google.maps.Marker({
+      position: latlng,
+      map: map,
+      icon: type
+      });
+      }
+      return marker;
+      }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false"></script>
+  </head>
+
+  <body>
+    <!-- Main Page -->
+    <div data-role="page" id="homePage" data-theme="b">
+      <div data-role="header" data-id="page-header" data-position="fixed">
+        <h1> Where is my car? </h1>
+      </div>
+      <div data-role="content">
+        <a href="#" data-role="button" id="curLoc" class="map-view-btn"> Remember My Location</a>
+        <a data-role="button" id="lastLoc" class="map-view-btn "> Locate My Car </a>
+        <div class="info-box">
+        </div>
+      </div>
+    </div>
+    <!-- Map View -->
+    <div data-role="page" id="mapPage">
+      <div data-role="header" data-id="page-header" data-position="fixed" class="pg-header">
+        <a data-rel="back" data-role="button" data-icon="home" data-iconpos="notext">Home</a>
+        <h1>My Car Location</h1>
+      </div>
+      <div data-role="content" id="map">
+      </div>
+    </div>
+  </body>
+</html>
